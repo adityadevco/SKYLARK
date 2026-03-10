@@ -251,10 +251,9 @@ def index(request):
 def api_chat(request):
     if request.method == "POST":
         env = lazy_get_env()
-        if not env["gemini_api_key"]:
-            return JsonResponse({"error": "Gemini API key is not configured in .env.local."}, status=400)
-            
-        genai.configure(api_key=env["gemini_api_key"])
+        gemini_enabled = bool(env["gemini_api_key"])
+        if gemini_enabled:
+            genai.configure(api_key=env["gemini_api_key"])
             
         try:
             data = json.loads(request.body)
@@ -265,43 +264,43 @@ def api_chat(request):
             if not isinstance(messages[-1], dict) or "content" not in messages[-1]:
                 return JsonResponse({"error": "Malformed message payload."}, status=400)
             
-            # format history for gemini
-            history = []
-            for m in messages[:-1]:
-                if not isinstance(m, dict):
-                    continue
-                content = m.get("content")
-                if not content:
-                    continue
-                role = "user" if m.get("role") == "user" else "model"
-                history.append({"role": role, "parts": [content]})
-                
             last_msg = messages[-1]["content"]
             if not isinstance(last_msg, str) or not last_msg.strip():
                 return JsonResponse({"error": "Last message cannot be empty."}, status=400)
             
             response = None
             last_error = None
-            for model_name in _get_model_candidates():
-                try:
-                    model = genai.GenerativeModel(
-                        model_name=model_name,
-                        tools=[get_work_orders_data, get_deals_data],
-                        system_instruction="You are Skylark, an AI BI Agent analyzing Monday.com data for executives. ALWAYS use your tools to fetch data if you need facts about deals or work orders. Be concise, highly insightful, format numbers perfectly, and synthesize directly from tool returns."
-                    )
-                    chat = model.start_chat(history=history, enable_automatic_function_calling=True)
-                    response = chat.send_message(last_msg)
-                    break
-                except Exception as model_error:
-                    last_error = model_error
-                    if _is_rate_limit_error(str(model_error)):
+            
+            # Try Gemini first if enabled
+            if gemini_enabled:
+                history = []
+                for m in messages[:-1]:
+                    if not isinstance(m, dict):
                         continue
-                    raise
+                    content = m.get("content")
+                    if not content:
+                        continue
+                    role = "user" if m.get("role") == "user" else "model"
+                    history.append({"role": role, "parts": [content]})
+                    
+                for model_name in _get_model_candidates():
+                    try:
+                        model = genai.GenerativeModel(
+                            model_name=model_name,
+                            tools=[get_work_orders_data, get_deals_data],
+                            system_instruction="You are Skylark, an AI BI Agent analyzing Monday.com data for executives. ALWAYS use your tools to fetch data if you need facts about deals or work orders. Be concise, highly insightful, format numbers perfectly, and synthesize directly from tool returns."
+                        )
+                        chat = model.start_chat(history=history, enable_automatic_function_calling=True)
+                        response = chat.send_message(last_msg)
+                        break
+                    except Exception as model_error:
+                        last_error = model_error
+                        if not _is_rate_limit_error(str(model_error)):
+                            break
+                        continue
 
+            # Fallback to direct Monday board data if Gemini unavailable or failed
             if response is None:
-                if last_error and not _is_rate_limit_error(str(last_error)):
-                    return JsonResponse({"error": "Assistant failed to respond. Please try again."}, status=500)
-
                 fallback_text = _fallback_reply(last_msg)
                 fallback_html = markdown.markdown(fallback_text, extensions=['fenced_code', 'tables'])
                 return JsonResponse({
@@ -322,18 +321,13 @@ def api_chat(request):
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON payload."}, status=400)
         except Exception as e:
-            error_str = str(e)
-            
-            if _is_rate_limit_error(error_str):
-                fallback_text = _fallback_reply(last_msg if 'last_msg' in locals() else "")
-                fallback_html = markdown.markdown(fallback_text, extensions=['fenced_code', 'tables'])
-                return JsonResponse({
-                    "role": "assistant",
-                    "content": fallback_html,
-                    "raw_content": fallback_text,
-                    "fallback": True,
-                })
-            else:
-                return JsonResponse({"error": "Unexpected server error while generating response."}, status=500)
+            fallback_text = _fallback_reply(last_msg if 'last_msg' in locals() else "")
+            fallback_html = markdown.markdown(fallback_text, extensions=['fenced_code', 'tables'])
+            return JsonResponse({
+                "role": "assistant",
+                "content": fallback_html,
+                "raw_content": fallback_text,
+                "fallback": True,
+            })
             
     return JsonResponse({"error": "Invalid method"}, status=405)
