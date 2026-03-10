@@ -85,14 +85,59 @@
                 Ask natural language questions to instantly analyze your Monday boards leveraging Gemini Pro.
             </p>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl px-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-5xl px-4">
+                <!-- Pipeline & Revenue -->
                 <div onclick="submitSuggestion('What is our projected revenue from deals in negotiation?')" class="p-4 rounded-xl glass hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
-                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">Revenue pipeline</div>
+                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">💰 Revenue Pipeline</div>
                     <div class="text-xs text-white/40">"What is our projected revenue from deals in negotiation?"</div>
                 </div>
+
+                <!-- Team Capacity -->
                 <div onclick="submitSuggestion('Who has the most open work orders right now?')" class="p-4 rounded-xl glass hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
-                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">Team capacity</div>
+                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">👥 Team Capacity</div>
                     <div class="text-xs text-white/40">"Who has the most open work orders right now?"</div>
+                </div>
+
+                <!-- Deal Performance -->
+                <div onclick="submitSuggestion('Tell me about our top-performing deals by value and stage')" class="p-4 rounded-xl glass hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
+                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">📊 Deal Performance</div>
+                    <div class="text-xs text-white/40">"Tell me about our top-performing deals by value and stage"</div>
+                </div>
+
+                <!-- Sector Analysis -->
+                <div onclick="submitSuggestion('What sectors are generating the most revenue and which need attention?')" class="p-4 rounded-xl glass hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
+                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">🏢 Sector Analysis</div>
+                    <div class="text-xs text-white/40">"What sectors are generating the most revenue..."</div>
+                </div>
+
+                <!-- Billing Health -->
+                <div onclick="submitSuggestion('What is our billing status and outstanding receivables?')" class="p-4 rounded-xl glass hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
+                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">💳 Billing Health</div>
+                    <div class="text-xs text-white/40">"What is our billing status and outstanding receivables?"</div>
+                </div>
+
+                <!-- Owner Performance -->
+                <div onclick="submitSuggestion('Rank our team members by deal pipeline value and project completion')" class="p-4 rounded-xl glass hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
+                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">🎯 Owner Performance</div>
+                    <div class="text-xs text-white/40">"Rank our team members by deal pipeline value..."</div>
+                </div>
+
+                <!-- Timeline & Targets -->
+                <div onclick="submitSuggestion('What are our Q1 and Q2 revenue targets and close date projections?')" class="p-4 rounded-xl glass hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
+                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">📅 Timeline & Targets</div>
+                    <div class="text-xs text-white/40">"What are our Q1 and Q2 revenue targets..."</div>
+                </div>
+
+                <!-- Risk & Opportunities -->
+                <div onclick="submitSuggestion('What are the stalled deals and high-risk projects requiring immediate attention?')" class="p-4 rounded-xl glass hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
+                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">⚠️ Risk & Opportunities</div>
+                    <div class="text-xs text-white/40">"What are the stalled deals requiring immediate attention?"</div>
+                </div>
+
+                <!-- Market Insights -->
+                <div onclick="submitSuggestion('What is our market diversification strategy and concentration risk?')" class="p-4 rounded-xl glass hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
+                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">🌍 Market Insights</div>
+                    <div class="text-xs text-white/40">"What is our market diversification strategy..."</div>
                 </div>
             </div>
         </div>
