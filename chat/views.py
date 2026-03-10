@@ -107,7 +107,7 @@ def api_chat(request):
             
             # Initialize model with tools
             model = genai.GenerativeModel(
-                model_name="gemini-2.5-flash",
+                model_name="gemini-2.0-flash",
                 tools=[get_work_orders_data, get_deals_data],
                 system_instruction="You are Skylark, an AI BI Agent analyzing Monday.com data for executives. ALWAYS use your tools to fetch data if you need facts about deals or work orders. Be concise, highly insightful, format numbers perfectly, and synthesize directly from tool returns."
             )
@@ -127,6 +127,13 @@ def api_chat(request):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            return JsonResponse({"error": str(e)}, status=500)
+            error_str = str(e)
+            
+            if "429" in error_str or "Quota exceeded" in error_str:
+                clean_error = "The Gemini API Rate Limit has been reached. Please wait a minute before sending another message. Free tier limits are strictly enforced by Google!"
+            else:
+                clean_error = error_str
+                
+            return JsonResponse({"error": clean_error}, status=500)
             
     return JsonResponse({"error": "Invalid method"}, status=405)
