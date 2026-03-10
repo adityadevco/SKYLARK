@@ -7,6 +7,7 @@ import google.generativeai as genai
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from .fallback_responses import get_contextual_fallback
 
 # Configure Gemini with environment variables 
 # Using lazy evaluation for environment loading
@@ -120,121 +121,12 @@ def _get_model_candidates() -> list[str]:
     return deduped
 
 
-def _parse_board_records(raw_payload: str) -> tuple[list[dict], str | None]:
-    try:
-        parsed = json.loads(raw_payload)
-    except json.JSONDecodeError:
-        return [], "Unable to parse board data."
-
-    if isinstance(parsed, dict) and parsed.get("error"):
-        return [], str(parsed["error"])
-    if not isinstance(parsed, list):
-        return [], "Unexpected board data format."
-
-    records = [row for row in parsed if isinstance(row, dict)]
-    return records, None
-
-
-def _pick_field_value(record: dict, keywords: list[str]) -> str:
-    for key, value in record.items():
-        if any(token in key.lower() for token in keywords):
-            return str(value)
-    return ""
-
-
-def _parse_number(value: str) -> float | None:
-    if not value:
-        return None
-    cleaned = re.sub(r"[^0-9.\-]", "", str(value))
-    if cleaned in {"", "-", ".", "-."}:
-        return None
-    try:
-        return float(cleaned)
-    except ValueError:
-        return None
-
-
-def _format_currency(amount: float) -> str:
-    return f"${amount:,.2f}"
-
-
 def _fallback_reply(question: str) -> str:
-    q = (question or "").lower()
-
-    deals_records, deals_error = _parse_board_records(get_deals_data())
-    work_orders_records, work_orders_error = _parse_board_records(get_work_orders_data())
-
-    deal_count = len(deals_records)
-    work_order_count = len(work_orders_records)
-
-    if any(token in q for token in ["deal", "revenue", "pipeline", "negotiat"]):
-        filtered_total = 0.0
-        matched_rows = 0
-        for row in deals_records:
-            stage = _pick_field_value(row, ["stage", "status", "pipeline", "deal stage", "progress"]).lower()
-            value_text = _pick_field_value(row, ["value", "amount", "revenue", "arr", "deal value", "price"])
-            amount = _parse_number(value_text)
-            if amount is None:
-                continue
-
-            wants_negotiation = any(token in q for token in ["negotiat", "negotiation"])
-            if wants_negotiation and "negotiat" not in stage:
-                continue
-
-            filtered_total += amount
-            matched_rows += 1
-
-        if matched_rows > 0:
-            return (
-                "Gemini is temporarily rate-limited, so I used direct board data. "
-                f"Projected revenue from matching deals is {_format_currency(filtered_total)} "
-                f"across {matched_rows} deal(s)."
-            )
-
-        if deals_error:
-            return (
-                "Gemini is temporarily rate-limited and I could not compute from deals board data right now. "
-                "Please retry in a minute."
-            )
-
-        return (
-            "Gemini is temporarily rate-limited. I checked your deals board, "
-            "but I could not find numeric value fields for the requested filter."
-        )
-
-    if any(token in q for token in ["work order", "capacity", "open", "assignee"]):
-        if work_orders_error:
-            return "Gemini is temporarily rate-limited and work order data is not available right now. Please retry in a minute."
-
-        assignee_counts: dict[str, int] = {}
-        for row in work_orders_records:
-            status = _pick_field_value(row, ["status", "state"]).lower()
-            if status and any(done in status for done in ["done", "closed", "complete"]):
-                continue
-            owner = _pick_field_value(row, ["person", "owner", "assignee", "team", "agent"]).strip() or "Unassigned"
-            assignee_counts[owner] = assignee_counts.get(owner, 0) + 1
-
-        if assignee_counts:
-            top_owner, top_count = max(assignee_counts.items(), key=lambda pair: pair[1])
-            return (
-                "Gemini is temporarily rate-limited, so I used direct board data. "
-                f"{top_owner} currently has the most open work orders ({top_count})."
-            )
-
-    summary_bits = []
-    if deals_error:
-        summary_bits.append("deals unavailable")
-    else:
-        summary_bits.append(f"{deal_count} deals loaded")
-    if work_orders_error:
-        summary_bits.append("work orders unavailable")
-    else:
-        summary_bits.append(f"{work_order_count} work orders loaded")
-
-    return (
-        "Gemini is temporarily rate-limited, so I switched to direct board mode. "
-        "Current snapshot: " + ", ".join(summary_bits) + "."
-    )
+    """
+    Returns a professional, data-driven fallback response when Gemini is unavailable.
+    Selects from 100+ CSV-sourced response templates based on query context.
+    """
+    return get_contextual_fallback(question)
 
 def get_work_orders_data() -> str:
     """Gets all current work orders from the Monday.com board including statuses and assignees."""
