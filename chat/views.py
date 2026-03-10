@@ -180,7 +180,7 @@ def api_chat(request):
                         model = genai.GenerativeModel(
                             model_name=model_name,
                             tools=[get_work_orders_data, get_deals_data],
-                            system_instruction="You are Skylark, an AI BI Agent analyzing Monday.com data for executives. ALWAYS use your tools to fetch data if you need facts about deals or work orders. Be concise, highly insightful, format numbers perfectly, and synthesize directly from tool returns."
+                            system_instruction="You are Skylark, an AI BI Agent analyzing Monday.com data for executives. ALWAYS fetch and use LIVE data from Monday boards. NEVER use stale or cached information. Be concise, highly insightful, format numbers perfectly, and synthesize directly from tool returns."
                         )
                         chat = model.start_chat(history=history, enable_automatic_function_calling=True)
                         response = chat.send_message(last_msg)

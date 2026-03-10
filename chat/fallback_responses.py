@@ -4,6 +4,38 @@ Used when Gemini API is unavailable or rate-limited.
 These responses provide real, data-driven insights without AI.
 """
 
+# General greetings and casual responses
+GREETINGS = [
+    "Hello! I'm Skylark, your AI BI Agent. I'm here to answer questions about your Monday.com deals, work orders, and business performance. What would you like to analyze?",
+    "Hi there! I can help you with revenue pipeline analysis, team capacity planning, billing status, sector breakdowns, and more. What's on your mind?",
+    "Welcome! I'm Skylark. I can provide instant insights into your sales pipeline, work orders, and team performance. Ask me anything about your Monday boards!",
+    "Hello! Ready to dive into your business intelligence? I can analyze deals, work orders, revenue projections, and team metrics. What would you like to know?",
+]
+
+# How are you / General chitchat
+CHITCHAT = [
+    "I'm running great, thanks for asking! Ready to help you analyze your Monday boards and business metrics. What can I help with?",
+    "Doing well! Let me help you get clarity on your pipeline, billing, capacity, or any other metrics. What's your question?",
+    "All systems operational! I'm here to support your business intelligence needs. What would you like to explore?",
+    "I'm functioning perfectly! Let's dive into some data analysis. Ask me about your deals, work orders, revenue, or team performance.",
+]
+
+# Help / What can you do
+CAPABILITIES = [
+    "I can help you with: **Revenue Pipeline Analysis** (deals in negotiation, close targets, projections), **Team Capacity** (open work orders, owner performance), **Billing Health** (collection status, AR aging), **Deal Performance** (pipeline value, stage distribution), **Sector Analysis** (Mining, Renewables, Railways focus), **Risk Assessment** (stalled deals, dead deals), and **Strategic Insights** (market diversification, concentration risk). What would you like to explore?",
+    "Here's what I can analyze for you: Sales pipeline breakdown, projected revenue, deal stages, owner performance, work order status, billing metrics, sector concentration, collection rates, and executive summaries. Which area interests you most?",
+    "I specialize in: **Pipeline analytics** (total value, deal stages, probabilities), **Work orders** (billing, completion status, sector breakdown), **Team metrics** (workload distribution, project completion), **Financial health** (collections, AR aging), and **Forecasting** (Q1/Q2 close targets). What metric would you like to review?",
+    "I can provide insights on your sales pipeline, work order execution, team performance, billing status, sector opportunities, customer concentration, and revenue forecasts. Ask me about any of these areas!",
+]
+
+# Thank you / Acknowledgments
+THANKS = [
+    "You're welcome! Feel free to ask me anything else about your Monday boards or business metrics anytime.",
+    "My pleasure! Let me know if you need any other analysis or insights. I'm here to help!",
+    "Happy to help! If you have more questions about your pipeline, work orders, or team performance, just ask.",
+    "Glad I could help! Feel free to reach out whenever you need business intelligence insights.",
+]
+
 FALLBACK_RESPONSES = [
     # Revenue & Pipeline Queries
     "Current pipeline value across all open deals is $850.2M across 92 active deals. Highest concentration in Mining sector ($320M) and Renewables ($180M).",
@@ -144,9 +176,33 @@ def get_random_fallback() -> str:
 
 def get_contextual_fallback(query: str) -> str:
     """Return a fallback response that best matches the user query."""
-    query_lower = query.lower()
+    query_lower = query.lower().strip()
     
-    # Map query keywords to response indices
+    # Check for greetings
+    greeting_keywords = ["hello", "hi", "hey", "greetings", "good morning", "good afternoon", "good evening", "welcome"]
+    if any(word in query_lower for word in greeting_keywords):
+        import random
+        return random.choice(GREETINGS)
+    
+    # Check for chitchat / How are you
+    chitchat_keywords = ["how are you", "how are u", "how's it going", "what's up", "sup", "you doing", "you good"]
+    if any(phrase in query_lower for phrase in chitchat_keywords):
+        import random
+        return random.choice(CHITCHAT)
+    
+    # Check for help / capabilities
+    help_keywords = ["help", "what can you do", "capabilities", "features", "what do you do", "how can you help"]
+    if any(word in query_lower for word in help_keywords):
+        import random
+        return random.choice(CAPABILITIES)
+    
+    # Check for thanks / acknowledgment
+    thanks_keywords = ["thank you", "thanks", "thankyou", "appreciate", "thx", "ty"]
+    if any(word in query_lower for word in thanks_keywords):
+        import random
+        return random.choice(THANKS)
+    
+    # Map business query keywords to response indices
     keyword_map = {
         "revenue": [0, 2, 5, 8, 12, 21, 24, 30],
         "pipeline": [1, 2, 6, 13, 18, 26, 34, 42],
