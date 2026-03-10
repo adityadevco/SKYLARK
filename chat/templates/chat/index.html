@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skylark Agent (Django + Gemini)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(20, 30, 80, 0.4), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(50, 20, 80, 0.3), transparent 25%);
+            background-attachment: fixed;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out both;
+            margin: 0 2px;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Markdown Styles for Agent */
+        .prose p { margin-bottom: 0.5rem; }
+        .prose ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 0.5rem; }
+        .prose strong { color: #fff; }
+        .prose code { background: rgba(255,255,255,0.1); padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.875rem; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <!-- Header -->
+    <header class="flex items-center justify-between px-6 py-4 glass border-b border-white/5 z-20">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <span class="font-bold text-white tracking-tighter">S</span>
+            </div>
+            <span class="font-semibold text-lg tracking-tight text-white/90">Skylark Agent <span class="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded ml-2">Django + Gemini</span></span>
+        </div>
+    </header>
+
+    <!-- Chat Area -->
+    <div class="flex-1 overflow-y-auto scroll-smooth p-4 md:p-8" id="chat-container">
+        
+        <div id="empty-state" class="flex flex-col items-center justify-center h-full px-4 transition-opacity duration-500">
+            <h1 class="text-3xl md:text-5xl font-bold mb-4 text-center tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
+                Founder Intelligence
+            </h1>
+            <p class="max-w-lg mb-12 text-center text-white/50 text-lg">
+                Ask natural language questions to instantly analyze your Tuesday boards leveraging Gemini Pro.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl px-4">
+                <div onclick="submitSuggestion('What is our projected revenue from deals in negotiation?')" class="p-4 rounded-xl glass hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
+                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">Revenue pipeline</div>
+                    <div class="text-xs text-white/40">"What is our projected revenue from deals in negotiation?"</div>
+                </div>
+                <div onclick="submitSuggestion('Who has the most open work orders right now?')" class="p-4 rounded-xl glass hover:bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-pointer group">
+                    <div class="text-sm font-medium text-white/80 mb-1 group-hover:text-blue-400 transition-colors">Team capacity</div>
+                    <div class="text-xs text-white/40">"Who has the most open work orders right now?"</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="messages" class="max-w-4xl mx-auto hidden pb-20">
+            <!-- Messages injected here -->
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="relative shrink-0 bg-gradient-to-t from-black via-black/90 to-transparent pt-10 pb-6 px-4">
+        <form id="chat-form" class="max-w-4xl mx-auto relative glass-card rounded-2xl overflow-hidden flex items-end w-full p-2">
+            <textarea 
+                id="message-input"
+                rows="1"
+                placeholder="Ask about your Monday boards..."
+                class="w-full max-h-[200px] min-h-[56px] py-4 pl-4 pr-16 bg-transparent border-0 resize-none focus:ring-0 focus:outline-none text-white/90 placeholder:text-white/40 overflow-y-auto"
+                onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); document.getElementById('chat-form').dispatchEvent(new Event('submit')); }"
+            ></textarea>
+            
+            <button type="submit" id="send-btn" class="absolute right-3 bottom-3 p-3 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-blue-500/40 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('chat-form');
+        const input = document.getElementById('message-input');
+        const messagesDiv = document.getElementById('messages');
+        const emptyState = document.getElementById('empty-state');
+        const chatContainer = document.getElementById('chat-container');
+        const sendBtn = document.getElementById('send-btn');
+        
+        let conversationHistory = [];
+
+        function submitSuggestion(text) {
+            input.value = text;
+            form.dispatchEvent(new Event('submit'));
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = input.value.trim();
+            if(!text) return;
+
+            // Hide empty state
+            emptyState.style.display = 'none';
+            messagesDiv.classList.remove('hidden');
+
+            // Add User Message
+            appendMessage('user', text);
+            conversationHistory.push({role: 'user', content: text});
+            
+            input.value = '';
+            input.style.height = 'auto'; // reset textarea height
+            sendBtn.disabled = true;
+
+            // Add Loading Indicator
+            const loaderId = 'loader-' + Date.now();
+            appendLoader(loaderId);
+
+            try {
+                const response = await fetch('/api/chat/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({messages: conversationHistory})
+                });
+                
+                const data = await response.json();
+                
+                // Remove Loader
+                document.getElementById(loaderId).remove();
+
+                if (data.error) {
+                    appendMessage('error', data.error);
+                } else {
+                    conversationHistory.push({role: 'assistant', content: data.raw_content});
+                    appendMessage('assistant', data.content, true);
+                }
+
+            } catch (err) {
+                document.getElementById(loaderId).remove();
+                appendMessage('error', "Network error or server crash. Check logs.");
+            }
+
+            sendBtn.disabled = false;
+        });
+
+        function appendMessage(role, content, isHtml = false) {
+            const wrapper = document.createElement('div');
+            wrapper.className = "flex w-full mb-6 " + (role === 'user' ? "justify-end" : "justify-start");
+            
+            const bubble = document.createElement('div');
+            bubble.className = "max-w-[85%] rounded-2xl px-5 py-4 " + 
+                (role === 'user' 
+                    ? "bg-blue-600 text-white ml-12" 
+                    : role === 'error' 
+                        ? "bg-red-500/20 text-red-200 border border-red-500/30 mr-12"
+                        : "glass-card text-white/90 mr-12 prose prose-invert");
+            
+            if (isHtml) {
+                bubble.innerHTML = content;
+            } else {
+                bubble.textContent = content;
+            }
+
+            wrapper.appendChild(bubble);
+            messagesDiv.appendChild(wrapper);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function appendLoader(id) {
+            const wrapper = document.createElement('div');
+            wrapper.id = id;
+            wrapper.className = "flex w-full mb-6 justify-start";
+            
+            const bubble = document.createElement('div');
+            bubble.className = "glass-card rounded-2xl px-5 py-4 flex items-center";
+            bubble.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+            
+            wrapper.appendChild(bubble);
+            messagesDiv.appendChild(wrapper);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Auto-resize textarea
+        input.addEventListener('input', function() {
+            this.style.height = 'auto';
+            const h = Math.min(this.scrollHeight, 200);
+            this.style.height = h + 'px';
+        });
+    </script>
+</body>
+</html>
